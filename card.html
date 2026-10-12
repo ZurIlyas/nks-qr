@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>NKS space — QR</title>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=IBM+Plex+Mono:wght@400;500;600&family=Marck+Script&display=swap" rel="stylesheet">
+<style>
+:root { --red: #a3201a; --red-hi: #d32a20; --ink: #0d0d0d; --coal: #171615; --cream: #f4efe6; --mute: #9a948a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #fff; }
+.card { position: relative; width: 500px; height: 705px; overflow: hidden; font: 500 13px/1.4 "IBM Plex Mono", monospace; color: var(--ink); background: var(--cream); }
+.r { font-family: "Russo One", sans-serif; text-transform: uppercase; }
+.hand { font-family: "Marck Script", cursive; }
+.abs { position: absolute; }
+.grain::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .12; mix-blend-mode: overlay; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.check { background: conic-gradient(var(--cream) 25%, var(--ink) 0 50%, var(--cream) 0 75%, var(--ink) 0) 0 0 / 20px 20px; }
+/* панель с кодом: поля вокруг кода — 4 модуля, как требует стандарт */
+.qr { position: absolute; background: #fff; padding: calc(var(--s) * 4 / 45); width: var(--s); height: var(--s); }
+.qr svg { display: block; width: 100%; height: 100%; }
+.ttl { font: 400 96px/.86 "Russo One", sans-serif; text-transform: uppercase; color: var(--red-hi); -webkit-text-stroke: 2.5px var(--cream); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--cream), 7px 7px 0 var(--red); transform: skewX(-7deg); white-space: nowrap; }
+.ttl.on-light { -webkit-text-stroke: 2.5px var(--ink); text-shadow: 3px 3px 0 var(--ink), 7px 7px 0 var(--red); }
+.sp { font: 400 30px/1 "Russo One", sans-serif; text-transform: lowercase; background: var(--ink); color: var(--cream); padding: 1px 10px 5px; border-radius: 8px; transform: rotate(-4deg); }
+.logo { width: 64px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand b { font: 400 22px/1 "Russo One", sans-serif; text-transform: uppercase; }
+.brand small { display: block; font: 500 10px/1.2 "IBM Plex Mono", monospace; letter-spacing: .16em; margin-top: 4px; opacity: .6; }
+.stk { display: grid; place-items: center; text-align: center; border-radius: 50%; font: 400 15px/1.05 "Russo One", sans-serif; text-transform: uppercase; }
+.tape { background: var(--red); color: #fff; border-top: 2px solid var(--cream); border-bottom: 2px solid var(--cream); font: 400 17px/1 "Russo One", sans-serif; text-transform: uppercase; white-space: nowrap; padding: 9px 0; text-align: center; }
+.cap { letter-spacing: .14em; text-transform: uppercase; font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const M = /*MATRIX*/["1111111010111010011100000100101111111", "1000001010010111100011100101101000001", "1011101010100000000101001010101011101", "1011101001101101010001110111001011101", "1011101001011100101110101110001011101", "1000001010100111011101001111101000001", "1111111010101010101010101010101111111", "0000000011100000101010011100100000000", "0011101011101100101011001010111100111", "1101110100001100010110100101001001000", "1010001000110011010100000111101110011", "0000110011110010001110100011001110011", "1001101011111110101011010111011011111", "1101100011100011100010100110110101100", "1001111011100101100100001001001101011", "1101010101101010100010110010111010000", "1110101000001100001101000110011010101", "0010110011001100010111110010110101100", "0100011011000010000000101101010100011", "1101100011000101101100010010110010011", "0001101011010100001111001100001111111", "0100000011010001101100011000000101000", "1101001110101111111010100001001001111", "0001110000011010000010011010001101001", "0010101111110000011101000000001011101", "1011010001011001000001101111101001010", "1010111000001101001100000100001100111", "1001110101001101010001001000110100001", "1011011010010000101100100110111111100", "0000000011100010101001010011100010010", "1111111000011110000100100010101011011", "1000001001100110001101011000100010011", "1011101010001010001100001111111110111", "1011101010001101010010100100101010100", "1011101010111001001010111010110101001", "1000001000000100011110110011101010001", "1111111001010110011000110111010110111"];
+const N = M.length;
+const finder = (x, y) => (x < 7 && y < 7) || (x >= N - 7 && y < 7) || (x < 7 && y >= N - 7);
+
+// style: square | round | dot; logo: вырезать центр под логотип
+function qr(style, fg, logo) {
+  const hole = logo ? 4.6 : 0, c = N / 2;
+  let s = '';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    if (M[y][x] !== '1' || finder(x, y)) continue;
+    if (hole && Math.abs(x + .5 - c) < hole && Math.abs(y + .5 - c) < hole) continue;
+    if (style === 'dot') s += `<circle cx="${x + .5}" cy="${y + .5}" r=".5"/>`;
+    else if (style === 'round') s += `<rect x="${x + .02}" y="${y + .02}" width=".96" height=".96" rx=".3"/>`;
+    else s += `<rect x="${x - .01}" y="${y - .01}" width="1.02" height="1.02"/>`;
+  }
+  // глазки скругляем слегка: по ним сканер находит код, сильное скругление мешает
+  const rx = style === 'square' ? [0, 0] : style === 'dot' ? [1.3, .8] : [1, .5];
+  for (const [x, y] of [[0, 0], [N - 7, 0], [0, N - 7]]) {
+    s += `<path fill-rule="evenodd" d="${rr(x, y, 7, rx[0])} ${rr(x + 1, y + 1, 5, Math.max(rx[0] - 1, 0))}"/>`;
+    s += `<path d="${rr(x + 2, y + 2, 3, rx[1])}"/>`;
+  }
+  const img = logo ? `<image href="assets/logo.png" x="${c - 3.8}" y="${c - 3.8}" width="7.6" height="7.6"/>` : '';
+  return `<svg viewBox="0 0 ${N} ${N}" fill="${fg}" shape-rendering="${style === 'square' ? 'crispEdges' : 'auto'}">${s}${img}</svg>`;
+}
+function rr(x, y, w, r) {
+  if (!r) return `M${x} ${y}h${w}v${w}h${-w}z`;
+  return `M${x + r} ${y}h${w - 2 * r}a${r} ${r} 0 0 1 ${r} ${r}v${w - 2 * r}a${r} ${r} 0 0 1 ${-r} ${r}h${-(w - 2 * r)}a${r} ${r} 0 0 1 ${-r} ${-r}v${-(w - 2 * r)}a${r} ${r} 0 0 1 ${r} ${-r}z`;
+}
+const box = (size, left, top, inner, extra) => `<div class="qr" style="--s:${size}px;left:${left}px;top:${top}px;${extra || ''}">${inner}</div>`;
+const brand = (color) => `<div class="brand" style="color:${color}"><img class="logo" src="assets/logo.png" alt=""><div><b>NKS space</b><small>COFFEE · PIT STOP</small></div></div>`;
+const ticker = (n) => Array.from({ length: n }, () => 'NKS space ✦ Меню ✦ Scan ✦').join(' ');
+
+const V = {
+  // 1. Классика: кремовая карточка, шахматная лента
+  1: () => `<div class="card grain">
+    <div class="abs" style="left:34px;top:30px">${brand('var(--ink)')}</div>
+    <div class="abs ttl on-light" style="left:38px;top:122px;font-size:104px">Меню</div>
+    <div class="abs sp" style="left:312px;top:196px">space</div>
+    ${box(300, 100, 268, qr('square', '#0d0d0d'), 'border:4px solid var(--ink);box-shadow:10px 10px 0 var(--red)')}
+    <div class="abs cap" style="left:0;right:0;top:604px;text-align:center">наведи камеру — откроется меню</div>
+    <div class="abs check" style="left:0;right:0;bottom:0;height:40px"></div>
+  </div>`,
+
+  // 2. Орбита: чёрная, код в кольце как на логотипе
+  2: () => `<div class="card grain" style="background:radial-gradient(80% 60% at 60% 45%, #3a0f0c 0%, var(--ink) 70%);color:var(--cream)">
+    <div class="abs" style="left:34px;top:30px">${brand('var(--cream)')}</div>
+    <div class="abs" style="left:-40px;right:-40px;top:206px;height:330px;border:20px solid var(--cream);border-radius:50%;transform:rotate(-17deg)"></div>
+    ${box(300, 100, 216, qr('round', '#7a130f', true), 'border-radius:30px;background:var(--cream)')}
+    <div class="abs ttl" style="left:34px;top:548px;font-size:78px">Меню</div>
+    <div class="abs cap" style="right:34px;top:596px;text-align:right;opacity:.75;line-height:1.6">наведи<br>камеру</div>
+  </div>`,
+
+  // 3. Красная: кремовая панель, стикер
+  3: () => `<div class="card grain" style="background:var(--red);color:#fff">
+    <div class="abs r" style="left:-14px;top:14px;font-size:150px;line-height:.8;color:rgba(0,0,0,.16);white-space:nowrap">Scan</div>
+    <div class="abs ttl" style="left:36px;top:66px;font-size:104px;color:var(--cream);-webkit-text-stroke:2.5px var(--ink);text-shadow:3px 3px 0 var(--ink),8px 8px 0 #5c110d">Меню</div>
+    ${box(310, 95, 214, qr('round', '#0d0d0d'), 'border-radius:26px;background:var(--cream);box-shadow:0 12px 0 #5c110d')}
+    <div class="abs stk" style="left:372px;top:170px;width:104px;height:104px;background:var(--ink);color:var(--cream);border:3px dashed var(--cream);transform:rotate(14deg)">Scan<br>me</div>
+    <div class="abs" style="left:36px;bottom:34px">${brand('#fff')}</div>
+    <div class="abs cap" style="right:36px;bottom:44px;text-align:right;line-height:1.6">камера →<br>меню</div>
+  </div>`,
+
+  // 4. Стикер: красный круг с орбитой, как логотип
+  4: () => `<div class="card grain">
+    <div class="abs" style="left:30px;top:76px;width:440px;height:440px;border-radius:50%;background:var(--red)"></div>
+    <div class="abs" style="left:-6px;right:-6px;top:176px;height:240px;border:18px solid #fff;border-radius:50%;transform:rotate(-17deg)"></div>
+    ${box(236, 132, 178, qr('square', '#0d0d0d'), 'border-radius:14px')}
+    <div class="abs ttl on-light" style="left:0;right:0;top:536px;font-size:76px;text-align:center">Меню</div>
+    <div class="abs cap" style="left:0;right:0;top:634px;text-align:center">NKS space · наведи камеру</div>
+    <div class="abs cap" style="left:0;right:0;top:30px;text-align:center;opacity:.6">coffee · pit stop</div>
+  </div>`,
+
+  // 5. Талон: пропуск на пит-стоп
+  5: () => `<div class="card grain" style="background:var(--ink)">
+    <div class="abs" style="left:36px;top:36px;right:36px;bottom:36px;background:var(--cream);border-radius:22px;-webkit-mask:radial-gradient(16px at 0 168px,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(16px at 100% 168px,#0000 98%,#000) right/51% 100% no-repeat">
+      <div class="abs cap" style="left:26px;top:24px;opacity:.6">pit stop pass · № 01</div>
+      <div class="abs ttl on-light" style="left:26px;top:52px;font-size:86px">Меню</div>
+      <div class="abs" style="left:26px;right:26px;top:168px;border-top:3px dashed var(--ink)"></div>
+      <div class="abs cap" style="left:26px;top:186px">admit one · scan to enter</div>
+      <div class="abs" style="left:26px;right:26px;bottom:24px;height:44px;background:repeating-linear-gradient(90deg,var(--ink) 0 3px,transparent 3px 7px,var(--ink) 7px 8px,transparent 8px 14px)"></div>
+      <div class="abs cap" style="right:26px;top:24px;color:var(--red)">NKS space</div>
+    </div>
+    ${box(276, 112, 268, qr('square', '#0d0d0d'), 'background:var(--cream);border:4px solid var(--ink)')}
+  </div>`,
+
+  // 6. Полароид со скотчем и подписью от руки
+  6: () => `<div class="card grain" style="background:radial-gradient(90% 70% at 30% 20%, #2a0d0b 0%, var(--ink) 75%);color:var(--cream)">
+    <div class="abs" style="left:58px;top:74px;width:384px;height:486px;background:var(--cream);border-radius:6px;transform:rotate(-3deg);box-shadow:0 30px 60px rgba(0,0,0,.6)">
+      <div class="abs hand" style="left:0;right:0;bottom:22px;text-align:center;font-size:40px;color:var(--ink)">меню тут ↑</div>
+    </div>
+    <div class="abs" style="left:190px;top:50px;width:120px;height:36px;background:rgba(211,42,32,.85);transform:rotate(-6deg)"></div>
+    ${box(320, 90, 104, qr('square', '#0d0d0d'), 'transform:rotate(-3deg)')}
+    <div class="abs stk" style="left:366px;top:470px;width:104px;height:104px;background:var(--red-hi);color:#fff;border:3px dashed var(--cream);transform:rotate(12deg)">Scan<br>&amp; sip</div>
+    <div class="abs" style="left:34px;bottom:30px">${brand('var(--cream)')}</div>
+  </div>`,
+
+  // 7. Чёрная дыра: диск из орбит вокруг кода
+  7: () => `<div class="card grain" style="background:#070505;color:var(--cream)">
+    <svg class="abs" style="left:-150px;top:10px" width="800" height="640" viewBox="-400 -320 800 640" fill="none"><g transform="rotate(-15)">
+      ${Array.from({ length: 34 }, (_, i) => { const r = 150 + i * 9; const red = i % 3 !== 1; return `<ellipse rx="${r}" ry="${r * .46}" stroke="${red ? '#d32a20' : '#f4efe6'}" stroke-opacity="${(red ? .85 : .55) * (1 - i / 44)}" stroke-width="${red ? 3.2 : 1.2}" stroke-dasharray="${40 + (i * 37) % 130} ${10 + (i * 13) % 40}"/>`; }).join('')}
+    </g></svg>
+    <div class="abs" style="left:96px;top:176px;width:308px;height:308px;border-radius:34px;box-shadow:0 0 0 3px #fff,0 0 70px 14px rgba(255,255,255,.55)"></div>
+    ${box(300, 100, 180, qr('round', '#0d0d0d', true), 'border-radius:32px;background:var(--cream)')}
+    <div class="abs ttl" style="left:34px;top:548px;font-size:84px">Меню</div>
+    <div class="abs sp" style="left:270px;top:612px;font-size:26px">space</div>
+    <div class="abs cap" style="left:34px;top:34px;opacity:.7">NKS space · кофе на орбите</div>
+    <div class="abs cap" style="right:34px;top:34px;opacity:.7">scan</div>
+  </div>`,
+
+  // 8. Гоночный номер: шахматная рамка
+  8: () => `<div class="card check">
+    <div class="abs grain" style="inset:22px;background:var(--cream)"></div>
+    <div class="abs stk" style="left:44px;top:44px;width:110px;height:110px;background:var(--ink);color:var(--cream);font-size:50px;transform:rotate(-8deg);border:4px solid var(--cream);outline:4px solid var(--ink)">01</div>
+    <div class="abs r" style="left:176px;top:58px;font-size:44px;line-height:1">Старт</div>
+    <div class="abs r" style="left:176px;top:104px;font-size:44px;line-height:1;color:var(--red-hi)">меню</div>
+    ${box(310, 95, 192, qr('square', '#0d0d0d'), 'border:5px solid var(--ink)')}
+    <div class="abs tape" style="left:22px;right:22px;top:536px;border-color:var(--ink)">наведи камеру ✦ scan ✦ меню</div>
+    <div class="abs" style="left:0;right:0;bottom:44px;display:flex;justify-content:center">${brand('var(--ink)')}</div>
+  </div>`,
+
+  // 9. Минимал: вертикальная надпись, красный код
+  9: () => `<div class="card grain">
+    <div class="abs r" style="left:28px;top:46px;font-size:118px;line-height:.86;color:var(--red-hi);writing-mode:vertical-rl;transform:rotate(180deg);height:612px;letter-spacing:.01em">Меню</div>
+    <div class="abs" style="left:166px;top:46px">${brand('var(--ink)')}</div>
+    ${box(300, 166, 150, qr('round', '#7a130f', true), 'border-radius:22px;box-shadow:10px 10px 0 var(--ink)')}
+    <div class="abs cap" style="left:166px;top:476px;line-height:1.9">01 — открой камеру<br>02 — наведи на код<br>03 — выбирай кофе</div>
+    <div class="abs hand" style="left:166px;top:592px;font-size:31px;white-space:nowrap;color:var(--ink);transform:rotate(-3deg)">до встречи на орбите</div>
+  </div>`,
+
+  // 10. Ленты: красные ленты по диагонали
+  10: () => `<div class="card grain" style="background:var(--ink);color:var(--cream)">
+    <div class="abs tape" style="left:-120px;width:780px;top:54px;transform:rotate(-9deg)">${ticker(3)}</div>
+    <div class="abs tape" style="left:-120px;width:780px;top:590px;transform:rotate(-9deg);background:var(--cream);color:var(--ink);border-color:var(--red)">${ticker(3)}</div>
+    ${box(300, 100, 176, qr('dot', '#0d0d0d'), 'border-radius:28px;background:var(--cream);box-shadow:12px 12px 0 var(--red)')}
+    <div class="abs ttl" style="left:36px;top:500px;font-size:74px">Меню</div>
+    <div class="abs cap" style="right:36px;top:520px;text-align:right;line-height:1.6;opacity:.8">наведи<br>камеру</div>
+    <div class="abs" style="left:36px;top:112px;display:none"></div>
+  </div>`,
+};
+const v = +new URLSearchParams(location.search).get('v') || 1;
+document.getElementById('app').innerHTML = (V[v] || V[1])();
+</script>
+</body>
+</html>
